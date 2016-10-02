@@ -1,0 +1,109 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# system_home is a small helper function that translates the home path string.
+#   there is probably a cleaner way to do this, but this works
+def system_home
+  ENV.fetch("HOME").tr("\\", "/")
+end
+
+# username is a small helper function for grabbing your username from the env
+#   variables
+def username
+  ENV.fetch("USERNAME")
+end
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # This is a custom-built linux box. See the didit_vagrant wiki for information
+  config.vm.box = "jaydorsey/ubuntu-16-rails"
+
+  # 3333 is for Ruby, others are general use
+  config.vm.network :forwarded_port, guest: 3333, host: 3333, auto_correct: true, protocol: :tcp
+
+  # For the mailcatcher gem
+  config.vm.network :forwarded_port, guest: 1080, host: 1080, auto_correct: true, protocol: :tcp
+
+  config.vm.provider "virtualbox" do |v|
+    v.gui = true
+    v.customize ["modifyvm", :id, "--memory", "4096"]
+    v.customize ["modifyvm", :id, "--cpus", "2"]
+    v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    v.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
+    v.customize ["modifyvm", :id, "--accelerate3d", "off"]
+    v.customize ["modifyvm", :id, "--vram", "128"]
+    # Advanced Programmable Interrupt Controllers (APICs) are a newer x86 hardware feature
+    # Enabling the I/O APIC is required for 64-bit guest operating systems, especially Windows Vista;
+    # it is also required if you want to use more than one virtual CPU in a VM.
+    v.customize ["modifyvm", :id, "--ioapic", "on"]
+  end
+
+  # these shell commands run as sudo so technically you shouldn't
+  # need to prefix, I do just because it's more clear
+  config.vm.provision 'shell', inline: <<-SHELL
+
+# I add this line to my bashrc or zshrc so it imports personal keys. I do this
+# rather than modifying the bashrc or zshrc file directly because updates to bash
+# or zsh are not guaranteed to not overwrite the ~/.bashrc or ~/.zshrc. This way,
+# At worst I only have to worry about losing one line if I do an apt-get update
+# on my system.
+#
+# This is an optional customization but provided as an example. It should be
+# wrapped in a command that checks for the presence of this line in the file
+# already (in case the system is being re-provisioned with vagrant --provision)
+echo '
+if [ -f /home/vagrant/.personalrc ]; then
+  . /home/vagrant/.personalrc
+fi' | sudo tee /home/vagrant/.bashrc
+SHELL
+
+  # YOU SHOULD REVIEW AND CUSTOMIZE THE FOLLOWING SECTION
+  #
+  # These are provided as examples only. Update or remove as necessary
+  #
+  # The following folders & files may be optionally imported into your VM when you run
+  # `vagrant up` for the first time. At a minimum, I suggest you import your ssh keys,
+  # the ICAM develop certs, your git settings, and your gemrc file
+  #
+  # I also highly suggest you put all your personalized customizations (ENV vars, aliases, etc.)
+  # inside of a personalized file (I use .personalrc) and source that file from
+  # .zshrc or .bashrc
+
+  # include folders
+  # vim settings
+  # config.vm.provision :file, source: "#{system_home}/.imports/.vim/", destination: "/home/vagrant/"
+  # personal ssh keys. do _NOT_ import an authorized_keys file here or you'll lock yourself out of your vm
+  # config.vm.provision :file, source: "#{system_home}/.imports/.ssh/", destination: "/home/vagrant/"
+  # ICAM certs
+  # config.vm.provision :file, source: "#{system_home}/.imports/.certs/", destination: "/home/vagrant/"
+  # a few scripts i use regularly (color_test.py, etc.)
+  # config.vm.provision :file, source: "#{system_home}/.imports/bin/", destination: "/home/vagrant/"
+  # import sublime & xfce settings
+  # config.vm.provision :file, source: "#{system_home}/.imports/.config/", destination: "/home/vagrant/"
+
+  # include files
+  # global bundler settings
+  # config.vm.provision :file, source: "#{system_home}/.imports/.bundle/config", destination: "/home/vagrant/.bundle/config"
+  # gemrc settings
+  # config.vm.provision :file, source: "#{system_home}/.imports/.gemrc", destination: "/home/vagrant/.gemrc"
+  # personalized git config
+  # config.vm.provision :file, source: "#{system_home}/.imports/.gitconfig", destination: "/home/vagrant/.gitconfig"
+  # personalized git ignore file (referenced from git config)
+  # config.vm.provision :file, source: "#{system_home}/.imports/.gitignore_global", destination: "/home/vagrant/.gitignore_global"
+  # fixes a home/end key mapping thing over ssh
+  # config.vm.provision :file, source: "#{system_home}/.imports/.inputrc", destination: "/home/vagrant/.inputrc"
+  # all of my personalized API keys, ENV vars, etc. also includes a script that chmods my ~/.ssh folder
+  # if the perms are wrong (otherwise keys won't work).
+  # config.vm.provision :file, source: "#{system_home}/.imports/.personalrc", destination: "/home/vagrant/.personalrc"
+  # tmux ftw
+  # config.vm.provision :file, source: "#{system_home}/.imports/.tmux.conf", destination: "/home/vagrant/.tmux.conf"
+  # vim ftw
+  # config.vm.provision :file, source: "#{system_home}/.imports/.vimrc", destination: "/home/vagrant/.vimrc"
+end
